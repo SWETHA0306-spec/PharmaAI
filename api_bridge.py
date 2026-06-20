@@ -77,14 +77,16 @@ ALGORITHM     = "HS256"
 ACCESS_EXPIRE = 120
 
 BASE_DIR   = Path(__file__).parent
-UPLOAD_DIR = str(BASE_DIR / "uploads")
-MONGO_URI  = "mongodb://localhost:27017"
+IS_VERCEL  = os.environ.get("VERCEL", "0") == "1"
+
+UPLOAD_DIR = "/tmp/uploads" if IS_VERCEL else str(BASE_DIR / "uploads")
+MONGO_URI  = os.environ.get("MONGO_URI", "mongodb://localhost:27017")
 MONGO_DB   = "pharma_ai"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(str(BASE_DIR / "reports"), exist_ok=True)
+os.makedirs("/tmp/reports" if IS_VERCEL else str(BASE_DIR / "reports"), exist_ok=True)
 
-AUDIO_CACHE_DIR  = str(BASE_DIR / "audio_cache")
+AUDIO_CACHE_DIR  = "/tmp/audio_cache" if IS_VERCEL else str(BASE_DIR / "audio_cache")
 AUDIO_CACHE_MAX_BYTES = int(os.environ.get("AUDIO_CACHE_MAX_MB", "200")) * 1024 * 1024
 os.makedirs(AUDIO_CACHE_DIR, exist_ok=True)
 
