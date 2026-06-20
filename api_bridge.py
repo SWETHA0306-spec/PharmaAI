@@ -80,7 +80,7 @@ BASE_DIR   = Path(__file__).parent
 IS_VERCEL  = os.environ.get("VERCEL", "0") == "1"
 
 UPLOAD_DIR = "/tmp/uploads" if IS_VERCEL else str(BASE_DIR / "uploads")
-MONGO_URI  = os.environ.get("MONGO_URI", "mongodb://localhost:27017")
+MONGO_URI  = os.environ.get("MONGO_URI", os.environ.get("MONGO_URL", "mongodb://localhost:27017"))
 MONGO_DB   = "pharma_ai"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
