@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PharmaAI — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #080c10;
+    --surface:   #0d1219;
+    --border:    #1a2333;
+    --accent:    #00c8a0;
+    --accent2:   #0099ff;
+    --text:      #e8edf5;
+    --muted:     #5a6a80;
+    --danger:    #ff4d6a;
+    --card:      #111827;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  /* ── Grid background ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  /* ── Glow blobs ── */
+  .blob {
+    position: fixed; border-radius: 50%;
+    filter: blur(80px); pointer-events: none; opacity: 0.12;
+  }
+  .blob-1 { width: 480px; height: 480px; background: var(--accent);  top: -120px; left: -80px; }
+  .blob-2 { width: 400px; height: 400px; background: var(--accent2); bottom: -100px; right: -60px; }
+
+  /* ── Layout ── */
+  .page {
+    display: flex; height: 100vh;
+    align-items: center; justify-content: center;
+    position: relative; z-index: 1;
+  }
+
+  .card {
+    width: 100%; max-width: 440px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px 40px;
+    box-shadow: 0 0 0 1px rgba(0,200,160,0.06), 0 24px 64px rgba(0,0,0,0.5);
+    animation: slideUp 0.5s cubic-bezier(0.22,1,0.36,1) both;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Logo ── */
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 36px;
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; }
+  .logo-sub  { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex; gap: 2px;
+    background: var(--surface); border-radius: 10px; padding: 3px;
+    margin-bottom: 32px;
+  }
+  .tab {
+    flex: 1; padding: 9px; border-radius: 8px; border: none;
+    background: transparent; color: var(--muted);
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .tab.active {
+    background: var(--border); color: var(--text);
+  }
+
+  /* ── Form ── */
+  .form-group { margin-bottom: 18px; }
+  label { display: block; font-size: 12px; font-weight: 500;
+          color: var(--muted); margin-bottom: 7px; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  input {
+    width: 100%; padding: 12px 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 15px;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,200,160,0.12);
+  }
+  input::placeholder { color: var(--muted); }
+
+  .btn-primary {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; border-radius: 10px; color: #000;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px;
+    cursor: pointer; transition: opacity 0.2s, transform 0.15s;
+    margin-top: 8px; letter-spacing: 0.02em;
+  }
+  .btn-primary:hover  { opacity: 0.9; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  /* ── Error / success ── */
+  .alert {
+    padding: 11px 14px; border-radius: 8px; font-size: 13px;
+    margin-bottom: 18px; display: none;
+  }
+  .alert.error   { background: rgba(255,77,106,0.1); border: 1px solid rgba(255,77,106,0.3); color: var(--danger); }
+  .alert.success { background: rgba(0,200,160,0.1);  border: 1px solid rgba(0,200,160,0.3);  color: var(--accent); }
+
+  /* ── Loader ── */
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid rgba(0,0,0,0.3);
+    border-top-color: #000; border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block; vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .form-panel { display: none; }
+  .form-panel.active { display: block; }
+
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+  .hint { font-size: 12px; color: var(--muted); text-align: center; margin-top: 14px; }
+  .hint a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<div class="page">
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">⚕</div>
+      <div>
+        <div class="logo-text">PharmaAI</div>
+        <div class="logo-sub">Drug Authenticity & Interaction Analysis</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="tab" onclick="switchTab('register')">Create Account</button>
+    </div>
+
+    <div id="alert" class="alert"></div>
+
+    <!-- ── LOGIN ── -->
+    <div id="loginPanel" class="form-panel active">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <button class="btn-primary" id="loginBtn" onclick="doLogin()">Sign In</button>
+    </div>
+
+    <!-- ── REGISTER ── -->
+    <div id="registerPanel" class="form-panel">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="regName" placeholder="Dr. Jane Smith"/>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="regEmail" placeholder="you@example.com"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="regPassword" placeholder="Min. 8 characters"/>
+      </div>
+      <button class="btn-primary" id="registerBtn" onclick="doRegister()">Create Account</button>
+    </div>
+
+    <p class="hint">Secure healthcare platform — <a href="#">Privacy Policy</a></p>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+
+function switchTab(tab) {
+  document.getElementById('loginPanel').classList.toggle('active', tab === 'login');
+  document.getElementById('registerPanel').classList.toggle('active', tab === 'register');
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0) === (tab==='login')));
+  hideAlert();
+}
+
+function showAlert(msg, type='error') {
+  const el = document.getElementById('alert');
+  el.textContent = msg; el.className = `alert ${type}`; el.style.display = 'block';
+}
+function hideAlert() {
+  document.getElementById('alert').style.display = 'none';
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.innerHTML = loading
+    ? '<span class="spinner"></span>Processing…'
+    : (btnId === 'loginBtn' ? 'Sign In' : 'Create Account');
+}
+
+async function doLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) return showAlert('Please fill in all fields.');
+  hideAlert(); setLoading('loginBtn', true);
+  try {
+    const res = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Login failed');
+    localStorage.setItem('pharma_token', data.access_token);
+    localStorage.setItem('pharma_user',  JSON.stringify({ email, full_name: data.full_name, role: data.role }));
+    showAlert('Welcome back! Redirecting…', 'success');
+    setTimeout(() => window.location.href = 'dashboard.html', 900);
+  } catch(e) {
+    showAlert(e.message);
+  } finally { setLoading('loginBtn', false); }
+}
+
+async function doRegister() {
+  const full_name = document.getElementById('regName').value.trim();
+  const email     = document.getElementById('regEmail').value.trim();
+  const password  = document.getElementById('regPassword').value;
+  if (!full_name || !email || !password) return showAlert('Please fill in all fields.');
+  if (password.length < 8) return showAlert('Password must be at least 8 characters.');
+  hideAlert(); setLoading('registerBtn', true);
+  try {
+    const res = await fetch(`${API}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name, email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Registration failed');
+    localStorage.setItem('pharma_token', data.access_token);
+    localStorage.setItem('pharma_user',  JSON.stringify({ email, full_name, role: data.role }));
+    showAlert('Account created! Redirecting…', 'success');
+    setTimeout(() => window.location.href = 'dashboard.html', 900);
+  } catch(e) {
+    showAlert(e.message);
+  } finally { setLoading('registerBtn', false); }
+}
+
+// If already logged in, skip to dashboard
+if (localStorage.getItem('pharma_token')) window.location.href = 'dashboard.html';
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const panel = document.querySelector('.form-panel.active').id;
+  if (panel === 'loginPanel') doLogin();
+  else doRegister();
+});
+</script>
+</body>
+</html>

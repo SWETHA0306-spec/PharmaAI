@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PharmaAI — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #070b0f;
+  --surface:  #0c1219;
+  --card:     #101820;
+  --border:   #182030;
+  --accent:   #00c8a0;
+  --accent2:  #0099ff;
+  --text:     #dde4ee;
+  --muted:    #4e6070;
+  --danger:   #ff4d6a;
+  --warn:     #f59e0b;
+  --low:      #00c8a0;
+  --moderate: #f59e0b;
+  --high:     #ff4d6a;
+  --critical: #c026d3;
+  --sidebar-w: 260px;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text);
+             font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
+
+/* ── SIDEBAR ─────────────────────────────────────────── */
+.sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  z-index: 100;
+}
+
+.sidebar-logo {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-row { display: flex; align-items: center; gap: 10px; }
+.logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 9px; display: flex; align-items: center;
+  justify-content: center; font-size: 16px;
+}
+.logo-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; }
+.logo-tag  { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 1px; }
+
+.nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+.nav-section { font-size: 10px; color: var(--muted); text-transform: uppercase;
+               letter-spacing: 0.1em; padding: 14px 12px 6px; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 9px; cursor: pointer;
+  color: var(--muted); font-size: 14px; font-weight: 500;
+  transition: all 0.15s; text-decoration: none; margin-bottom: 2px;
+}
+.nav-item:hover { background: var(--border); color: var(--text); }
+.nav-item.active { background: rgba(0,200,160,0.1); color: var(--accent); }
+.nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+.badge { margin-left: auto; background: var(--accent); color: #000;
+         font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+
+.sidebar-footer {
+  padding: 16px 12px;
+  border-top: 1px solid var(--border);
+}
+.user-row { display: flex; align-items: center; gap: 10px; padding: 8px; }
+.avatar { width: 34px; height: 34px; border-radius: 50%;
+          background: linear-gradient(135deg, var(--accent), var(--accent2));
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: #000; }
+.user-name  { font-size: 13px; font-weight: 500; }
+.user-role  { font-size: 11px; color: var(--muted); text-transform: capitalize; }
+.logout-btn { margin-left: auto; background: none; border: none;
+              color: var(--muted); cursor: pointer; font-size: 16px;
+              transition: color 0.15s; }
+.logout-btn:hover { color: var(--danger); }
+
+/* ── MAIN ───────────────────────────────────────────── */
+.main { margin-left: var(--sidebar-w); min-height: 100vh; }
+
+.topbar {
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface);
+  position: sticky; top: 0; z-index: 50;
+}
+.page-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; }
+.page-subtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.status-dot { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+       box-shadow: 0 0 0 3px rgba(0,200,160,0.15); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+.content { padding: 32px; }
+
+/* ── PANELS ─────────────────────────────────────────── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── STATS ROW ─────────────────────────────────────── */
+.stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px;
+  position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+.stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+.stat-value { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; margin: 6px 0 2px; }
+.stat-sub   { font-size: 12px; color: var(--muted); }
+.stat-icon  { position: absolute; right: 16px; top: 16px; font-size: 24px; opacity: 0.15; }
+
+/* ── ANALYZER ────────────────────────────────────────── */
+.analyzer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+.section-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px;
+}
+.section-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+                 margin-bottom: 6px; }
+.section-sub   { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+/* ── Drop zone ── */
+.dropzone {
+  border: 2px dashed var(--border); border-radius: 12px; padding: 40px 20px;
+  text-align: center; cursor: pointer; transition: all 0.2s; position: relative;
+}
+.dropzone:hover, .dropzone.dragover {
+  border-color: var(--accent); background: rgba(0,200,160,0.04);
+}
+.dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.dz-icon  { font-size: 36px; margin-bottom: 12px; }
+.dz-title { font-weight: 500; margin-bottom: 6px; }
+.dz-sub   { font-size: 12px; color: var(--muted); }
+
+/* ── Image previews ── */
+.preview-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.preview-item {
+  position: relative; width: 80px; height: 80px; border-radius: 8px;
+  overflow: hidden; border: 1px solid var(--border);
+}
+.preview-item img { width: 100%; height: 100%; object-fit: cover; }
+.preview-remove {
+  position: absolute; top: 3px; right: 3px; width: 18px; height: 18px;
+  background: var(--danger); border-radius: 50%; border: none; color: white;
+  font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Form fields ── */
+.field-group { margin-bottom: 18px; }
+.field-label { font-size: 12px; color: var(--muted); text-transform: uppercase;
+               letter-spacing: 0.07em; margin-bottom: 7px; display: block; }
+.field-input, .field-textarea {
+  width: 100%; padding: 11px 15px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field-input:focus, .field-textarea:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,200,160,0.1);
+}
+.field-input::placeholder, .field-textarea::placeholder { color: var(--muted); }
+.field-textarea { resize: vertical; min-height: 80px; }
+
+/* ── Progress items (live streaming feedback) ── */
+.progress-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 9px; font-size: 13px;
+  margin-bottom: 6px; background: var(--surface);
+  border: 1px solid var(--border);
+  animation: fadeIn 0.3s ease both;
+}
+.progress-item .pi-spinner {
+  width: 14px; height: 14px; border: 2px solid var(--border);
+  border-top-color: var(--accent2); border-radius: 50%;
+  animation: spin 0.7s linear infinite; flex-shrink: 0;
+}
+.progress-item .pi-check  { color: var(--accent);  flex-shrink: 0; font-size: 14px; }
+.progress-item .pi-error  { color: var(--danger);  flex-shrink: 0; font-size: 14px; }
+.progress-item .pi-label  { flex: 1; color: var(--muted); }
+.progress-item.done .pi-label { color: var(--text); }
+.progress-item.err  .pi-label { color: var(--danger); }
+
+/* ── Submit ── */
+.btn-analyze {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none; border-radius: 12px; color: #000;
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px;
+  cursor: pointer; transition: opacity 0.2s, transform 0.15s; margin-top: 12px;
+  letter-spacing: 0.02em;
+}
+.btn-analyze:hover   { opacity: 0.9; transform: translateY(-1px); }
+.btn-analyze:disabled{ opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* ── Results ── */
+#resultsArea { margin-top: 28px; }
+
+.result-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  overflow: hidden; margin-bottom: 20px;
+  animation: fadeIn 0.4s ease both;
+}
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+
+.result-header {
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px;
+}
+.verdict-badge {
+  padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+  font-family: 'Syne', sans-serif; letter-spacing: 0.04em;
+}
+.verdict-AUTHENTIC  { background: rgba(0,200,160,0.15); color: var(--accent);  border: 1px solid rgba(0,200,160,0.3); }
+.verdict-SUSPICIOUS { background: rgba(245,158,11,0.15); color: var(--warn);   border: 1px solid rgba(245,158,11,0.3); }
+.verdict-ALERT      { background: rgba(255,77,106,0.15); color: var(--danger); border: 1px solid rgba(255,77,106,0.3); }
+.verdict-UNKNOWN    { background: rgba(78,96,112,0.2);   color: var(--muted);  border: 1px solid var(--border); }
+
+.result-drug-name { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+.result-generic   { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.auth-score-wrap  { margin-left: auto; text-align: right; }
+.auth-score-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+.auth-score-val   { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; }
+
+.result-body { padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+.result-section-title { font-size: 11px; color: var(--muted); text-transform: uppercase;
+                        letter-spacing: 0.07em; margin-bottom: 12px; }
+
+.info-row { display: flex; justify-content: space-between; align-items: flex-start;
+            padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.info-row:last-child { border-bottom: none; }
+.info-key { color: var(--muted); }
+.info-val { font-weight: 500; text-align: right; max-width: 55%; word-break: break-word; }
+
+/* ── Interactions table ── */
+.interactions-section { padding: 0 24px 24px; }
+.interaction-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.interaction-table th { padding: 10px 12px; text-align: left; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted);
+  border-bottom: 1px solid var(--border); }
+.interaction-table td { padding: 11px 12px; border-bottom: 1px solid var(--border); }
+.interaction-table tr:last-child td { border-bottom: none; }
+.sev-MAJOR    { color: var(--danger); font-weight: 600; }
+.sev-MODERATE { color: var(--warn);   font-weight: 600; }
+.sev-MINOR    { color: var(--accent); font-weight: 600; }
+
+.risk-bar-wrap { margin-top: 12px; }
+.risk-label-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+.risk-bar { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.risk-fill { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(0.22,1,0.36,1); }
+
+.flags-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.flag-chip {
+  padding: 4px 11px; border-radius: 6px; font-size: 11px;
+  background: rgba(255,77,106,0.1); border: 1px solid rgba(255,77,106,0.25);
+  color: var(--danger);
+}
+
+/* ── HISTORY ─────────────────────────────────────────── */
+.history-table-wrap { overflow-x: auto; }
+.history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.history-table th { padding: 11px 16px; text-align: left; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted);
+  border-bottom: 1px solid var(--border); background: var(--surface); }
+.history-table td { padding: 13px 16px; border-bottom: 1px solid var(--border); }
+.history-table tr:hover td { background: rgba(255,255,255,0.02); }
+.small-badge { padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+
+/* ── CHARTS ──────────────────────────────────────────── */
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+.chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+.chart-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.chart-sub   { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+.chart-canvas-wrap { position: relative; height: 220px; }
+
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--card); border: 1px solid var(--border);
+  padding: 14px 20px; border-radius: 12px; font-size: 13px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 300;
+  transform: translateY(20px); opacity: 0;
+  transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
+  max-width: 320px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: rgba(0,200,160,0.4); color: var(--accent); }
+.toast.error   { border-color: rgba(255,77,106,0.4); color: var(--danger); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-row">
+      <div class="logo-icon">⚕</div>
+      <div>
+        <div class="logo-name">PharmaAI</div>
+        <div class="logo-tag">Drug Analysis Platform</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-section">Analysis</div>
+    <a class="nav-item active" onclick="showPanel('analyze')" href="#">
+      <span class="icon">🔬</span> Analyze Drug
+    </a>
+    <a class="nav-item" onclick="showPanel('history')" href="#">
+      <span class="icon">📋</span> History
+    </a>
+
+    <div class="nav-section">Insights</div>
+    <a class="nav-item" onclick="showPanel('charts')" href="#">
+      <span class="icon">📊</span> Analytics
+    </a>
+
+    <div class="nav-section" id="adminSection" style="display:none">Admin</div>
+    <a class="nav-item" onclick="showPanel('fraud')" href="#" id="fraudNav" style="display:none">
+      <span class="icon">🛡️</span> Fraud Log
+      <span class="badge" id="fraudBadge">0</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-row">
+      <div class="avatar" id="userAvatar">?</div>
+      <div>
+        <div class="user-name" id="userName">Loading…</div>
+        <div class="user-role" id="userRole">user</div>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Logout">⏏</button>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title" id="pageTitle">Analyze Drug</div>
+      <div class="page-subtitle" id="pageSub">Upload images or enter drug name for full pipeline analysis</div>
+    </div>
+    <div class="status-dot">
+      <div class="dot"></div>
+      APIs Online
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ ANALYZE PANEL ══════════════════════════════════ -->
+    <div class="panel active" id="analyzePanel">
+
+      <!-- Stats row -->
+      <div class="stats-grid" id="statsRow">
+        <div class="stat-card">
+          <div class="stat-icon">🔬</div>
+          <div class="stat-label">Total Checks</div>
+          <div class="stat-value" id="statTotal">—</div>
+          <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-label">Flagged Drugs</div>
+          <div class="stat-value" id="statFlagged">—</div>
+          <div class="stat-sub">Suspicious / Alert</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💊</div>
+          <div class="stat-label">Interactions Found</div>
+          <div class="stat-value" id="statInteractions">—</div>
+          <div class="stat-sub">Total DDIs logged</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🛡️</div>
+          <div class="stat-label">Avg Auth Score</div>
+          <div class="stat-value" id="statAvgScore">—</div>
+          <div class="stat-sub">0 – 100 scale</div>
+        </div>
+      </div>
+
+      <!-- Analyzer — two clean input areas side by side -->
+      <div class="analyzer-grid">
+
+        <!-- Left: Image upload -->
+        <div class="section-card">
+          <div class="section-title">📷 Drug Images</div>
+          <div class="section-sub">Each image = one drug. Upload 2+ to compare them.</div>
+          <div class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" multiple accept="image/*" onchange="handleFiles(this.files)"/>
+            <div class="dz-icon">🖼️</div>
+            <div class="dz-title">Click or drag images here</div>
+            <div class="dz-sub">PNG · JPG · WEBP · Upload multiple</div>
+          </div>
+          <div class="preview-grid" id="previewGrid"></div>
+          <div id="imgCount" style="display:none;margin-top:10px;font-size:12px;color:var(--accent)"></div>
+        </div>
+
+        <!-- Right: Drug names + submit -->
+        <div class="section-card">
+          <div class="section-title">💊 Drug Names</div>
+          <div class="section-sub">One drug per line — minimum 2 total (images + names combined)</div>
+          <div class="field-group">
+            <label class="field-label">Enter drug names (one per line)</label>
+            <textarea class="field-textarea" id="drugNamesArea" rows="8"
+                      placeholder="Metformin&#10;Warfarin&#10;Aspirin&#10;…"
+                      style="min-height:160px;font-size:14px;line-height:1.8"></textarea>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px">
+              Every drug listed + every image uploaded will be compared against each other pairwise.
+            </div>
+          </div>
+          <div style="background:rgba(0,153,255,0.08);border:1px solid rgba(0,153,255,0.2);
+                      border-radius:10px;padding:12px 14px;font-size:12px;color:var(--accent2);
+                      margin-bottom:16px;line-height:1.6">
+            💡 e.g. type <strong>Metformin</strong> + <strong>Warfarin</strong> → checks Metformin ↔ Warfarin using FDA labels &amp; FAERS real-world data.
+          </div>
+          <button class="btn-analyze" id="analyzeBtn" onclick="runAnalysis()">
+            ⚕ Analyze Interactions
+          </button>
+          <div id="analyzeError" style="display:none;margin-top:14px;padding:12px;
+               background:rgba(255,77,106,0.1);border:1px solid rgba(255,77,106,0.3);
+               border-radius:10px;font-size:13px;color:var(--danger)"></div>
+          <div id="liveProgress" style="display:none;margin-top:16px">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:8px">⏳ Resolving &amp; checking interactions…</div>
+            <div id="progressItems"></div>
+          </div>
+        </div>      </div>
+
+      <!-- Results -->
+      <div id="resultsArea"></div>
+    </div>
+
+    <!-- ══ HISTORY PANEL ══════════════════════════════════ -->
+    <div class="panel" id="historyPanel">
+      <div class="section-card">
+        <div class="section-title">Analysis History</div>
+        <div class="section-sub">Your past drug checks and results</div>
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>#</th><th>Drug Name</th><th>Mode</th><th>Verdict</th>
+                <th>Risk</th><th>Auth %</th><th>DDIs</th><th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CHARTS PANEL ═══════════════════════════════════ -->
+    <div class="panel" id="chartsPanel">
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Authenticity Verdicts</div>
+          <div class="chart-sub">Distribution across all your checks</div>
+          <div class="chart-canvas-wrap"><canvas id="verdictChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Risk Level Distribution</div>
+          <div class="chart-sub">Overall risk scores assigned by pipeline</div>
+          <div class="chart-canvas-wrap"><canvas id="riskChart"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Checks Over Time</div>
+        <div class="chart-sub">Daily analysis activity (last 14 days)</div>
+        <div class="chart-canvas-wrap" style="height:200px"><canvas id="timelineChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ══ FRAUD PANEL ════════════════════════════════════ -->
+    <div class="panel" id="fraudPanel">
+      <div class="section-card">
+        <div class="section-title">Fraud Detection Log</div>
+        <div class="section-sub">Suspicious behaviour flags from the monitoring module</div>
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr><th>Time</th><th>User</th><th>IP</th><th>Event</th><th>Details</th></tr>
+            </thead>
+            <tbody id="fraudBody">
+              <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  GLOBALS
+// ══════════════════════════════════════════════════════════════
+const API   = 'http://localhost:8000';
+const token = localStorage.getItem('pharma_token');
+const user  = JSON.parse(localStorage.getItem('pharma_user') || '{}');
+if (!token) window.location.href = 'index.html';
+
+let selectedFiles = [];   // array of File objects
+let chartsInited  = false;
+
+// ── Init ─────────────────────────────────────────────────────
+document.getElementById('userName').textContent   = user.full_name || user.email || 'User';
+document.getElementById('userRole').textContent   = user.role || 'user';
+document.getElementById('userAvatar').textContent = (user.full_name || 'U')[0].toUpperCase();
+
+if (user.role === 'admin') {
+  document.getElementById('adminSection').style.display = '';
+  document.getElementById('fraudNav').style.display     = '';
+}
+loadStats();
+setupDragDrop();
+
+// ══════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════════
+const panelMeta = {
+  analyze: { title: 'Analyze Drug',  sub: 'Upload images or type drug names — results appear one by one' },
+  history: { title: 'History',       sub: 'Your past drug checks and results' },
+  charts:  { title: 'Analytics',     sub: 'Visual breakdown of your analysis data' },
+  fraud:   { title: 'Fraud Log',     sub: 'Suspicious activity flags (admin)' },
+};
+
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(id + 'Panel').classList.add('active');
+  event.currentTarget && event.currentTarget.classList.add('active');
+  document.getElementById('pageTitle').textContent = panelMeta[id].title;
+  document.getElementById('pageSub').textContent   = panelMeta[id].sub;
+  if (id === 'history') loadHistory();
+  if (id === 'charts')  loadCharts();
+  if (id === 'fraud')   loadFraud();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════════════════
+function logout() {
+  localStorage.removeItem('pharma_token');
+  localStorage.removeItem('pharma_user');
+  window.location.href = 'index.html';
+}
+
+async function apiFetch(path, opts = {}) {
+  // 3-minute timeout — analysis takes 60-90 sec
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 180000);
+  try {
+    const res = await fetch(API + path, {
+      ...opts,
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${token}`, ...(opts.headers || {}) }
+    });
+    clearTimeout(timer);
+    if (res.status === 401) { logout(); return null; }
+    return res;
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('Request timed out. Try fewer drugs.');
+    throw e;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FILE HANDLING
+// ══════════════════════════════════════════════════════════════
+function setupDragDrop() {
+  const dz = document.getElementById('dropzone');
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dragover');
+    handleFiles(e.dataTransfer.files);
+  });
+}
+
+function handleFiles(files) {
+  Array.from(files).forEach(f => {
+    if (!f.type.startsWith('image/')) return;
+    selectedFiles.push(f);
+    const reader = new FileReader();
+    reader.onload = ev => renderPreview(ev.target.result, selectedFiles.length - 1);
+    reader.readAsDataURL(f);
+  });
+  updateImgCount();
+}
+
+function renderPreview(src, idx) {
+  const grid = document.getElementById('previewGrid');
+  const wrap = document.createElement('div');
+  wrap.className = 'preview-item'; wrap.id = `prev_${idx}`;
+  wrap.innerHTML = `<img src="${src}" alt="preview"/>
+    <button class="preview-remove" onclick="removeFile(${idx})">✕</button>`;
+  grid.appendChild(wrap);
+}
+
+function removeFile(idx) {
+  selectedFiles[idx] = null;
+  const el = document.getElementById(`prev_${idx}`);
+  if (el) el.remove();
+  updateImgCount();
+}
+
+function updateImgCount() {
+  const n   = selectedFiles.filter(Boolean).length;
+  const el  = document.getElementById('imgCount');
+  el.style.display = n ? 'block' : 'none';
+  el.textContent   = `${n} image${n !== 1 ? 's' : ''} queued`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ANALYSIS — streams results one by one as each finishes
+// ══════════════════════════════════════════════════════════════
+async function runAnalysis() {
+  const files     = selectedFiles.filter(Boolean);
+  const namesRaw  = (document.getElementById('drugNamesArea').value || '').trim();
+
+  if (files.length === 0 && !namesRaw) {
+    showError('Add at least one image or drug name.'); return;
+  }
+  if (files.length + namesRaw.split('\n').filter(s=>s.trim()).length < 2) {
+    showError('Please provide at least 2 drugs to check interactions between them.'); return;
+  }
+
+  clearError();
+  setBusy(true);
+  showProgress(true);
+  document.getElementById('resultsArea').innerHTML = '';
+
+  try {
+    const fd = new FormData();
+    files.forEach(f => fd.append('images', f));
+    fd.append('drug_names', namesRaw);   // newline-separated
+
+    const res  = await apiFetch('/api/analyze', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+
+    renderMultiResult(data);
+    loadStats();
+  } catch(e) {
+    showError(e.message);
+  } finally {
+    setBusy(false);
+    showProgress(false);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  RENDER MULTI-DRUG RESULT
+//  data = { drugs[], pairs[], combined{}, errors[] }
+// ══════════════════════════════════════════════════════════════
+function renderMultiResult(data) {
+  const area    = document.getElementById('resultsArea');
+  const drugs   = data.drugs   || [];
+  const pairs   = data.pairs   || [];
+  const comb    = data.combined || {};
+  const errors  = data.errors  || [];
+
+  const RISK_COL = {
+    CRITICAL:'var(--critical)', HIGH:'var(--high)',
+    MODERATE:'var(--moderate)', LOW:'var(--low)',
+    NONE:'var(--accent)', UNKNOWN:'var(--muted)'
+  };
+  const SEV_COL = {
+    contraindicated:'var(--critical)', major:'var(--high)',
+    moderate:'var(--moderate)',        minor:'var(--low)',
+    unknown:'var(--muted)'
+  };
+  const VERDICT_COL = {
+    AUTHENTIC:'var(--accent)', SUSPICIOUS:'var(--warn)',
+    ALERT:'var(--danger)',      UNKNOWN:'var(--muted)'
+  };
+
+  // ── 1. COMBINED VERDICT BANNER ─────────────────────────────
+  const wRisk   = comb.overall_interaction_risk || 'NONE';
+  const wCol    = RISK_COL[wRisk] || 'var(--muted)';
+  const totalI  = comb.total_interactions || 0;
+  area.insertAdjacentHTML('beforeend', `
+  <div style="background:${wCol}18;border:1.5px solid ${wCol}55;border-radius:16px;
+              padding:20px 28px;margin-bottom:24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+    <div style="flex:1;min-width:180px">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:${wCol}">
+        ${wRisk === 'NONE' ? '✅' : wRisk === 'LOW' ? '🟢' : wRisk === 'MODERATE' ? '🟡' : wRisk === 'HIGH' ? '🔴' : '🚫'}
+        Overall Risk: ${wRisk}
+      </div>
+      <div style="font-size:13px;color:var(--text);margin-top:6px;line-height:1.6">
+        ${comb.recommendation || ''}
+      </div>
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <div style="text-align:center">
+        <div style="font-size:26px;font-weight:800;font-family:'Syne',sans-serif;color:var(--text)">${drugs.length}</div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Drugs</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:26px;font-weight:800;font-family:'Syne',sans-serif;color:${totalI>0?'var(--warn)':'var(--accent)'}">${totalI}</div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Interactions</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:26px;font-weight:800;font-family:'Syne',sans-serif;color:var(--text)">${pairs.length}</div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Pairs Checked</div>
+      </div>
+    </div>
+  </div>`);
+
+  // ── 2. DRUG IDENTITY CARDS (row) ──────────────────────────
+  if (drugs.length) {
+    area.insertAdjacentHTML('beforeend',
+      `<div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+                   color:var(--muted);text-transform:uppercase;letter-spacing:.1em;
+                   margin-bottom:12px">Drug Profiles</div>`);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:28px';
+
+    drugs.forEach((drug, idx) => {
+      const score  = drug.auth_score != null ? Math.round(drug.auth_score*100) : null;
+      const vc     = VERDICT_COL[drug.verdict] || 'var(--muted)';
+      const sc     = score==null?'var(--muted)':score>=70?'var(--accent)':score>=40?'var(--warn)':'var(--danger)';
+      const ocrF   = drug.ocr_fields || {};
+      const ocrRows = [
+        ['Batch', ocrF.batch_no], ['Exp', ocrF.exp_date],
+        ['Mfg',   ocrF.mfg_date], ['MRP', ocrF.mrp],
+      ].filter(([,v])=>v);
+
+      const card = document.createElement('div');
+      card.className = 'section-card';
+      card.style.cssText = 'margin:0;padding:20px';
+      card.innerHTML = `
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;gap:8px">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--text)">
+              ${drug.brand_name || drug.label || 'Drug '+(idx+1)}
+            </div>
+            ${drug.generic_name && drug.generic_name!==drug.brand_name
+              ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${drug.generic_name}</div>` : ''}
+          </div>
+          <span style="background:${vc}22;color:${vc};border:1px solid ${vc}55;
+                       padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;
+                       white-space:nowrap">${drug.verdict}</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    margin-bottom:10px;padding:10px 12px;background:var(--surface);
+                    border-radius:10px">
+          <span style="font-size:12px;color:var(--muted)">Auth Score</span>
+          <span style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif;color:${sc}">
+            ${score!=null?score+'%':'—'}
+          </span>
+        </div>
+
+        ${[
+          ['Drug Class', drug.drug_class],
+          ['Dosage',     drug.dosage ? drug.dosage+(drug.dosage_form?' · '+drug.dosage_form:'') : drug.dosage_form],
+          ['Route',      drug.route],
+          ['Formula',    drug.formula],
+          ['Manufacturer',drug.manufacturer],
+          ['RxCUI',      drug.rxcui],
+          ['Detected Language', drug.detected_language],
+          ['OCR Confidence', drug.ocr_confidence ? (drug.ocr_confidence <= 1 ? Math.round(drug.ocr_confidence * 100) + '%' : drug.ocr_confidence) : null],
+          ['Composition', ocrF.composition],
+        ].filter(([,v])=>v).map(([k,v])=>`
+          <div style="display:flex;justify-content:space-between;padding:5px 0;
+                      border-bottom:1px solid var(--border);gap:8px;font-size:12px">
+            <span style="color:var(--muted);flex-shrink:0">${k}</span>
+            <span style="color:var(--text);text-align:right">${v}</span>
+          </div>`).join('')}
+
+        ${ocrRows.length ? `
+          <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
+            ${ocrRows.map(([k,v])=>`
+              <div style="font-size:11px;color:var(--muted);background:var(--surface);
+                          padding:4px 8px;border-radius:6px">
+                <span>${k}: </span><span style="color:var(--text)">${v}</span>
+              </div>`).join('')}
+          </div>` : ''}
+
+        ${drug.suspicion_flags?.length ? `
+          <div style="margin-top:10px">
+            ${drug.suspicion_flags.map(f=>`<span class="flag-chip" style="font-size:11px">${f}</span>`).join('')}
+          </div>` : ''}
+      `;
+      grid.appendChild(card);
+    });
+    area.appendChild(grid);
+  }
+
+  // ── 3. PAIRWISE INTERACTION TABLES ─────────────────────────
+  if (pairs.length) {
+    area.insertAdjacentHTML('beforeend',
+      `<div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+                   color:var(--muted);text-transform:uppercase;letter-spacing:.1em;
+                   margin-bottom:12px">Pairwise Interaction Analysis</div>`);
+
+    pairs.forEach(pair => {
+      const pRisk = (pair.overall_risk || 'NONE').toUpperCase();
+      const pCol  = RISK_COL[pRisk] || 'var(--muted)';
+      const iList = pair.interactions || [];
+      const hasError = pair.error;
+
+      const iRows = iList.length
+        ? iList.map(x => `<tr>
+            <td style="font-weight:600;font-size:13px;color:var(--text)">
+              ${x.drug_a||''} <span style="color:var(--muted)">↔</span> ${x.drug_b||''}
+            </td>
+            <td>
+              <span style="color:${SEV_COL[x.severity]||'var(--muted)'};
+                           font-weight:700;font-size:11px;text-transform:uppercase;
+                           background:${SEV_COL[x.severity]||'var(--muted)'}22;
+                           padding:3px 8px;border-radius:4px">
+                ${x.severity}
+              </span>
+            </td>
+            <td style="font-size:12px;color:var(--muted);line-height:1.5;max-width:400px">
+              ${x.description||'—'}
+            </td>
+            <td style="font-size:11px;color:var(--muted)">
+              ${x.source||''}
+            </td>
+          </tr>`).join('')
+        : `<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--accent)">
+             ✓ No interactions found between these drugs</td></tr>`;
+
+      area.insertAdjacentHTML('beforeend', `
+      <div class="result-card" style="margin-bottom:16px;overflow:visible">
+
+        <!-- Pair header -->
+        <div style="padding:18px 24px;display:flex;align-items:center;
+                    gap:16px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px">
+              ${pair.drug_a}
+              <span style="color:var(--muted);margin:0 8px">↔</span>
+              ${pair.drug_b}
+            </div>
+            ${pair.drugs_checked?.length
+              ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">
+                   Checked: ${pair.drugs_checked.join(', ')}</div>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="text-align:center">
+              <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;
+                          color:${iList.length>0?'var(--warn)':'var(--accent)'}">
+                ${iList.length}
+              </div>
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Found</div>
+            </div>
+            <span style="background:${pCol}22;color:${pCol};border:1px solid ${pCol}55;
+                         padding:6px 16px;border-radius:20px;font-weight:700;font-size:12px">
+              ${pRisk === 'NONE' ? '✅ ' : pRisk === 'LOW' ? '🟢 ' : pRisk === 'MODERATE' ? '🟡 ' : pRisk === 'HIGH' ? '🔴 ' : '🚫 '}
+              ${pRisk}
+            </span>
+          </div>
+        </div>
+
+        ${hasError ? `
+        <div style="padding:16px 24px;color:var(--danger);font-size:13px">
+          ⚠ Error checking this pair: ${pair.error}
+        </div>` : ''}
+
+        <!-- Interaction table -->
+        <div style="overflow-x:auto">
+          <table class="interaction-table" style="margin:0">
+            <thead>
+              <tr>
+                <th>Drug Pair</th>
+                <th>Severity</th>
+                <th>Description (from FDA Label)</th>
+                <th>Source</th>
+              </tr>
+            </thead>
+            <tbody>${iRows}</tbody>
+          </table>
+        </div>
+
+        ${pair.unresolved?.length ? `
+        <div style="padding:10px 24px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)">
+          ⚠ Unresolved: ${pair.unresolved.join(', ')}
+        </div>` : ''}
+
+      </div>`);
+    });
+  }
+
+  // ── 4. ERRORS ─────────────────────────────────────────────
+  errors.forEach(e => {
+    area.insertAdjacentHTML('beforeend',`
+    <div style="padding:14px 20px;background:rgba(255,77,106,0.08);
+                border:1px solid rgba(255,77,106,0.3);border-radius:12px;margin-bottom:12px">
+      <div style="color:var(--danger);font-weight:600;margin-bottom:4px">
+        ⚠ Error: ${e.label}</div>
+      <div style="font-size:13px;color:var(--text)">${e.error}</div>
+    </div>`);
+  });
+
+  // ── 5. AI SAFETY ASSISTANT ─────────────────────────────────
+  currentExplanationEnglish = data.patient_explanation || "No safety explanation generated.";
+  currentExplanationTranslated = currentExplanationEnglish;
+  // Stable cache key for voice audio: the same combination of medicines
+  // (in this fixed order) always maps to the same cache slot per language,
+  // so repeated checks of e.g. "Paracetamol" don't re-call Sarvam TTS.
+  currentMedicineKey = drugs.map(d => d.brand_name || d.label || '').filter(Boolean).join('+') || 'unknown';
+  stopVoice();
+  
+  area.insertAdjacentHTML('beforeend', `
+  <div class="section-card" id="sarvamAssistantSection" style="margin-top:24px;border:1.5px solid var(--accent)55">
+    <div class="section-title" style="color:var(--accent);display:flex;align-items:center;gap:8px">
+      <span>🤖 AI Safety Assistant</span>
+    </div>
+    <div class="section-sub">Patient-friendly safety summary, translations, and voice assistant</div>
+    
+    <div id="sarvamExplanationContent" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;font-size:14px;line-height:1.6;margin-bottom:20px;min-height:60px;color:var(--text)">
+      ${currentExplanationEnglish}
+    </div>
+    
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <label class="field-label" style="margin:0;white-space:nowrap">Select Language:</label>
+        <select id="sarvamLangSelect" class="field-input" style="width:160px;padding:8px 12px;margin:0" onchange="translateExplanation()">
+          <option value="en-IN">English</option>
+          <option value="hi-IN">Hindi (हिन्दी)</option>
+          <option value="ta-IN">Tamil (தமிழ்)</option>
+          <option value="te-IN">Telugu (తెలుగు)</option>
+          <option value="kn-IN">Kannada (ಕನ್ನಡ)</option>
+          <option value="ml-IN">Malayalam (മലയാളं)</option>
+          <option value="mr-IN">Marathi (मराठी)</option>
+          <option value="bn-IN">Bengali (বাংলা)</option>
+        </select>
+      </div>
+      
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="field-input" style="width:auto;padding:8px 16px;cursor:pointer;background:var(--border);border-color:var(--border);margin:0" onclick="playVoice()">🔊 Listen</button>
+        <button class="field-input" style="width:auto;padding:8px 16px;cursor:pointer;background:var(--border);border-color:var(--border);margin:0" onclick="pauseVoice()">⏸ Pause</button>
+        <button class="field-input" style="width:auto;padding:8px 16px;cursor:pointer;background:var(--border);border-color:var(--border);margin:0" onclick="stopVoice()">⏹ Stop</button>
+      </div>
+    </div>
+  </div>`);
+
+  area.scrollIntoView({ behavior:'smooth', block:'start' });
+  toast(`Analysis complete — ${pairs.length} pair(s) checked`, 'success');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  UI HELPERS  (these were missing — caused silent crash)
+// ══════════════════════════════════════════════════════════════
+function showError(msg) {
+  const el = document.getElementById('analyzeError');
+  if (!el) { alert('Error: ' + msg); return; }
+  el.textContent   = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+function clearError() {
+  const el = document.getElementById('analyzeError');
+  if (el) el.style.display = 'none';
+}
+function setBusy(busy) {
+  const btn = document.getElementById('analyzeBtn');
+  if (!btn) return;
+  btn.disabled    = busy;
+  btn.textContent = busy ? '⏳ Analyzing… (may take 60-90 sec)' : '⚕ Analyze Interactions';
+}
+function showProgress(show) {
+  const el = document.getElementById('liveProgress');
+  if (el) el.style.display = show ? 'block' : 'none';
+}
+
+let _toastTimer = null;
+function toast(msg, type) {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    t.style.cssText = `position:fixed;bottom:28px;right:28px;z-index:9999;
+      padding:12px 22px;border-radius:12px;font-size:13px;font-weight:600;
+      pointer-events:none;transition:opacity .3s;`;
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = type === 'success' ? '#00c8a0' : '#ff4d6a';
+  t.style.color       = '#fff';
+  t.style.opacity     = '1';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 3500);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  STATS
+// ══════════════════════════════════════════════════════════════
+async function loadStats() {
+  try {
+    const res  = await apiFetch('/api/stats');
+    if (!res || !res.ok) return;
+    const data = await res.json();
+    const t    = data.totals || {};
+    const el   = id => document.getElementById(id);
+    if (el('statTotal'))         el('statTotal').textContent         = t.total || 0;
+    if (el('statInteractions'))  el('statInteractions').textContent  = t.total_interactions || 0;
+    if (el('statAuthentic')) {
+      const v = (data.verdicts || []).find(v => v.verdict === 'AUTHENTIC');
+      el('statAuthentic').textContent = v ? v.count : 0;
+    }
+    if (el('statSuspicious')) {
+      const v = (data.verdicts || []).find(v => v.verdict === 'SUSPICIOUS');
+      el('statSuspicious').textContent = v ? v.count : 0;
+    }
+  } catch(e) { console.warn('loadStats:', e); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  HISTORY
+// ══════════════════════════════════════════════════════════════
+async function loadHistory() {
+  const tbody = document.getElementById('historyBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;color:var(--muted);text-align:center">Loading…</td></tr>';
+  try {
+    const res  = await apiFetch('/api/history');
+    if (!res || !res.ok) return;
+    const data = await res.json();
+    const rows = data.history || [];
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="padding:24px;color:var(--muted);text-align:center">No history yet</td></tr>';
+      return;
+    }
+    const RISK_COLOR = { HIGH:'var(--high)', CRITICAL:'var(--critical)', MODERATE:'var(--warn)', LOW:'var(--low)', NONE:'var(--accent)' };
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td style="color:var(--text)">${r.drug_name || '—'}</td>
+        <td>${r.input_mode || '—'}</td>
+        <td><span style="color:${r.verdict==='AUTHENTIC'?'var(--accent)':'var(--warn)'}">${r.verdict||'—'}</span></td>
+        <td><span style="color:${RISK_COLOR[r.risk_level]||'var(--muted)'}">
+          ${r.risk_level||'—'}</span></td>
+        <td>${r.interaction_count ?? '—'}</td>
+        <td style="color:var(--muted);font-size:12px">${r.created_at ? r.created_at.slice(0,16).replace('T',' ') : '—'}</td>
+      </tr>`).join('');
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="6" style="color:var(--danger);padding:16px">Error: ${e.message}</td></tr>`; }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CHARTS
+// ══════════════════════════════════════════════════════════════
+async function loadCharts() {
+  if (chartsInited) return;
+  chartsInited = true;
+  try {
+    const res  = await apiFetch('/api/stats');
+    if (!res || !res.ok) return;
+    const data = await res.json();
+
+    // Timeline
+    const tl   = data.timeline || [];
+    const tlCtx = document.getElementById('timelineChart');
+    if (tlCtx && tl.length) {
+      new Chart(tlCtx, { type:'line', data:{
+        labels: tl.map(t=>t.day),
+        datasets:[{label:'Checks per day',data:tl.map(t=>t.count),
+          borderColor:'#00c8a0',backgroundColor:'rgba(0,200,160,.12)',
+          tension:.4,fill:true,pointRadius:4,pointBackgroundColor:'#00c8a0'}]
+      }, options:{plugins:{legend:{labels:{color:'#a0aab8'}}},
+        scales:{x:{ticks:{color:'#a0aab8'},grid:{color:'#1e2a36'}},
+                y:{ticks:{color:'#a0aab8'},grid:{color:'#1e2a36'}}}}});
+    }
+
+    // Risk pie
+    const risks   = data.risks || [];
+    const rCtx    = document.getElementById('riskChart');
+    const RC      = ['#ff4d6a','#ff8c42','#ffd166','#06d6a0','#a0aab8'];
+    if (rCtx && risks.length) {
+      new Chart(rCtx, { type:'doughnut', data:{
+        labels: risks.map(r=>r.risk_level||'UNKNOWN'),
+        datasets:[{data:risks.map(r=>r.count),backgroundColor:RC}]
+      }, options:{plugins:{legend:{labels:{color:'#a0aab8'}}}}});
+    }
+
+    // Verdict bar
+    const vd     = data.verdicts || [];
+    const vCtx   = document.getElementById('verdictChart');
+    if (vCtx && vd.length) {
+      new Chart(vCtx, { type:'bar', data:{
+        labels: vd.map(v=>v.verdict||'UNKNOWN'),
+        datasets:[{label:'Count',data:vd.map(v=>v.count),
+          backgroundColor:'rgba(0,153,255,.6)',borderColor:'#0099ff',borderWidth:1}]
+      }, options:{plugins:{legend:{labels:{color:'#a0aab8'}}},
+        scales:{x:{ticks:{color:'#a0aab8'},grid:{color:'#1e2a36'}},
+                y:{ticks:{color:'#a0aab8'},grid:{color:'#1e2a36'}}}}});
+    }
+  } catch(e) { console.warn('loadCharts:', e); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FRAUD LOG
+// ══════════════════════════════════════════════════════════════
+async function loadFraud() {
+  const tbody = document.getElementById('fraudBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;color:var(--muted);text-align:center">Loading…</td></tr>';
+  try {
+    const res  = await apiFetch('/api/admin/fraud');
+    if (!res || !res.ok) { tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;color:var(--muted)">Unavailable</td></tr>'; return; }
+    const data = await res.json();
+    const rows = data.fraud_events || [];
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;color:var(--accent);text-align:center">✓ No fraud events</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td style="color:var(--text)">${r.ip_address||'—'}</td>
+        <td>${r.email||'—'}</td>
+        <td style="color:var(--warn)">${r.event_type||'—'}</td>
+        <td style="font-size:12px;color:var(--muted)">${r.flagged_at ? r.flagged_at.slice(0,16).replace('T',' ') : '—'}</td>
+        <td style="font-size:12px;color:var(--muted)">${JSON.stringify(r.details||{})}</td>
+      </tr>`).join('');
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="5" style="color:var(--danger);padding:16px">Error: ${e.message}</td></tr>`; }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SARVAM AI ASSISTANT JS LOGIC
+// ══════════════════════════════════════════════════════════════
+let currentExplanationEnglish = "";
+let currentExplanationTranslated = "";
+let currentMedicineKey = "";
+let currentAudio = null;
+
+async function translateExplanation() {
+  const lang = document.getElementById('sarvamLangSelect').value;
+  const contentEl = document.getElementById('sarvamExplanationContent');
+  if (!contentEl) return;
+  
+  if (lang === 'en-IN') {
+    currentExplanationTranslated = currentExplanationEnglish;
+    contentEl.textContent = currentExplanationTranslated;
+    stopVoice();
+    return;
+  }
+  
+  // Long explanations get split into multiple chunks server-side (the
+  // translation model caps input length), so this can legitimately take
+  // a few seconds longer than a short text. Make that visible instead of
+  // showing a generic spinner that looks stuck.
+  const isLong = currentExplanationEnglish.length > 950;
+  contentEl.innerHTML = `<span style="color:var(--muted)">⏳ Translating explanation into selected language${isLong ? ' (long text, processing in parts — this may take a few seconds)' : ''}...</span>`;
+  stopVoice();
+  
+  try {
+    const res = await apiFetch('/api/sarvam/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: currentExplanationEnglish, target_language: lang })
+    });
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+    const data = await res.json();
+    currentExplanationTranslated = data.translated_text;
+    contentEl.textContent = currentExplanationTranslated;
+  } catch (e) {
+    console.error('Translation error:', e);
+    let msg = e.message || String(e);
+    if (msg.includes('exceed') && msg.includes('character')) {
+      msg = 'The explanation was too long for the translation service to process in one piece. Please try again — if this keeps happening, contact support.';
+    }
+    contentEl.innerHTML = `<span style="color:var(--danger)">⚠ Translation failed: ${msg}</span>`;
+  }
+}
+
+async function playVoice() {
+  if (currentAudio) {
+    if (currentAudio.paused) {
+      currentAudio.play();
+      toast("Playback resumed", "success");
+      return;
+    } else {
+      currentAudio.currentTime = 0;
+      currentAudio.play();
+      toast("Replaying audio", "success");
+      return;
+    }
+  }
+  
+  const lang = document.getElementById('sarvamLangSelect').value;
+  const textToSpeak = currentExplanationTranslated || currentExplanationEnglish;
+  if (!textToSpeak) {
+    toast("No text available for TTS", "error");
+    return;
+  }
+  
+  toast(textToSpeak.length > 2200 ? "Generating voice output (long text, this may take a few seconds)..." : "Generating voice output...", "success");
+  
+  try {
+    const res = await apiFetch('/api/sarvam/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: textToSpeak, language: lang, medicine_id: currentMedicineKey })
+    });
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+    const data = await res.json();
+    if (data.tts_fallback) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        
+        let voices = window.speechSynthesis.getVoices();
+        if (voices.length === 0) {
+          await new Promise(resolve => {
+            window.speechSynthesis.onvoiceschanged = () => {
+              voices = window.speechSynthesis.getVoices();
+              resolve();
+            };
+            setTimeout(resolve, 1500); // Safety timeout
+          });
+        }
+
+        const langMap = {
+          "en-IN": "en-IN", "hi-IN": "hi-IN", "ta-IN": "ta-IN",
+          "te-IN": "te-IN", "kn-IN": "kn-IN", "ml-IN": "ml-IN",
+          "mr-IN": "mr-IN", "bn-IN": "bn-IN"
+        };
+        const languageCode = langMap[lang] || "en-IN";
+        const languagePrefix = languageCode.split('-')[0];
+
+        let matchingVoices = voices.filter(v => v.lang.replace('_', '-').toLowerCase() === languageCode.toLowerCase());
+        if (matchingVoices.length === 0) {
+          matchingVoices = voices.filter(v => v.lang.toLowerCase().startsWith(languagePrefix.toLowerCase()));
+        }
+
+        let selectedVoice = null;
+        if (matchingVoices.length > 0) {
+          if (languageCode === "ta-IN") {
+            selectedVoice = matchingVoices.find(v => v.name.includes("Valluvar")) || matchingVoices[0];
+          } else {
+            selectedVoice = matchingVoices[0];
+          }
+        }
+
+        if (!selectedVoice && languagePrefix !== 'en') {
+          toast("Native voice for this language is not available on this device.", "error");
+          console.log("Language:", languageCode);
+          console.log("Voice:", undefined);
+          return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = languageCode;
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
+
+        console.log("Language:", languageCode);
+        console.log("Voice:", selectedVoice?.name);
+
+        window.speechSynthesis.speak(utterance);
+        toast("Playing voice (browser fallback)", "success");
+      } else {
+        toast("Voice not supported in this browser", "error");
+      }
+      return;
+    }
+    if (currentAudio) { currentAudio.pause(); }
+    currentAudio = new Audio("data:audio/wav;base64," + data.audio);
+    currentAudio.play();
+    toast(data.cached ? "Playing voice (cached)" : "Playing voice", "success");
+  } catch (e) {
+    console.error('TTS error:', e);
+    toast("Voice assistant failed: " + (e.message || e), "error");
+  }
+}
+
+function pauseVoice() {
+  if (currentAudio && !currentAudio.paused) {
+    currentAudio.pause();
+    toast("Playback paused", "success");
+  }
+  if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+    window.speechSynthesis.pause();
+    toast("Playback paused", "success");
+  }
+}
+
+function stopVoice() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+    toast("Playback stopped", "success");
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+}
+</script>
+</body>
+</html>

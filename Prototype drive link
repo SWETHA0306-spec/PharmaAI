@@ -1,0 +1,9 @@
+Click the drive link below to view the working prototype model.
+
+We have successfully completed both the frontend and backend development. The OCR module has been finalized and optimized, and the backend services are fully functional. Our OCR model achieves around 95% accuracy, even in dim or unclear image conditions, ensuring reliable drug text extraction from medicine packaging.
+
+In addition, the drug interaction checking system has also been implemented, enabling the system to analyze interactions between multiple identified drugs and provide insights about potential risks and side effects.
+
+
+
+https://docs.google.com/videos/d/18jZHvG5IJ1rEP5z15G69JEolcvTnJVc58V1ZboKx55g/edit?usp=sharing

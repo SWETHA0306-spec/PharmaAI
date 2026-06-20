@@ -1,0 +1,16 @@
+# Secrets — never commit your real .env
+.env
+
+# Virtual environment
+venv/
+__pycache__/
+*.pyc
+
+# Local upload/output folders
+uploads/
+reports/
+audio_cache/
+
+# OS/editor cruft
+.DS_Store
+.vscode/
